@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Weather App</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="text-center">Weather App</h1>
+        <form method="POST" class="form-inline justify-content-center mt-3">
+            <input type="text" name="city" class="form-control mr-2" placeholder="Enter city name" required>
+            <button type="submit" class="btn btn-primary">Get Weather</button>
+        </form>
+        <div class="text-center mt-3">
+            <button class="btn btn-secondary" onclick="getLocation()">Get Weather by Location</button>
+        </div>
+        {% if error %}
+        <div class="alert alert-danger mt-3 text-center">{{ error }}</div>
+        {% endif %}
+        {% if weather %}
+        <div class="weather-info mt-5 text-center">
+            <h2>Weather in {{ weather.city }}</h2>
+            <p><img src="http://openweathermap.org/img/wn/{{ weather.icon }}@2x.png" alt="Weather icon"></p>
+            <p>Temperature: {{ weather.temperature }}°C</p>
+            <p>Description: {{ weather.description }}</p>
+            <p>Humidity: {{ weather.humidity }}%</p>
+            <p>Pressure: {{ weather.pressure }} hPa</p>
+            <p>Wind Speed: {{ weather.wind_speed }} m/s</p>
+            <p>Sunrise: {{ weather.sunrise | datetimeformat }}</p>
+            <p>Sunset: {{ weather.sunset | datetimeformat }}</p>
+        </div>
+        <h3 class="text-center mt-5">5-Day Forecast</h3>
+        <div class="forecast mt-3">
+            {% for day in forecast %}
+            <div class="forecast-day text-center">
+                <p>{{ day.date }}</p>
+                <p><img src="http://openweathermap.org/img/wn/{{ day.icon }}@2x.png" alt="Weather icon"></p>
+                <p>Temperature: {{ day.temperature }}°C</p>
+                <p>Description: {{ day.description }}</p>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    <script>
+        function getLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(showPosition);
+            } else {
+                alert("Geolocation is not supported by this browser.");
+            }
+        }
+
+        function showPosition(position) {
+            fetch('/location', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    lat: position.coords.latitude,
+                    lon: position.coords.longitude
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    document.querySelector('.weather-info').innerHTML = `
+                        <h2>Weather in ${data.weather.city}</h2>
+                        <p><img src="http://openweathermap.org/img/wn/${data.weather.icon}@2x.png" alt="Weather icon"></p>
+                        <p>Temperature: ${data.weather.temperature}°C</p>
+                        <p>Description: ${data.weather.description}</p>
+                        <p>Humidity: ${data.weather.humidity}%</p>
+                        <p>Pressure: ${data.weather.pressure} hPa</p>
+                        <p>Wind Speed: ${data.weather.wind_speed} m/s</p>
+                        <p>Sunrise: ${new Date(data.weather.sunrise * 1000).toLocaleTimeString()}</p>
+                        <p>Sunset: ${new Date(data.weather.sunset * 1000).toLocaleTimeString()}</p>
+                    `;
+                    document.querySelector('.forecast').innerHTML = data.forecast.map(day => `
+                        <div class="forecast-day text-center">
+                            <p>${day.date}</p>
+                            <p><img src="http://openweathermap.org/img/wn/${day.icon}@2x.png" alt="Weather icon"></p>
+                            <p>Temperature: ${day.temperature}°C</p>
+                            <p>Description: ${day.description}</p>
+                        </div>
+                    `).join('');
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+    </script>
+</body>
+</html>
